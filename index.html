@@ -6762,9 +6762,11 @@
 
       <!-- Main Content -->
       <div class="intro-content">
-                    <h1 class="intro-title">
+                    <h1 class="intro-title" style="position: relative;">
                                              <img class="q-letter" id="qLetter" src="LOGO/Q.png" alt="Q" style="height: calc(29rem * var(--scale-factor)); vertical-align: baseline;" />
-                       <img class="other-letters" src="LOGO/'.png" alt="'" style="height: calc(26rem * var(--scale-factor)); vertical-align: baseline; margin-left: calc(-0.6rem * var(--scale-factor));" />
+                       <img class="other-letters" id="apostropheLetter" src="LOGO/'.png" alt="'" style="height: calc(26rem * var(--scale-factor)); vertical-align: baseline; margin-left: calc(-0.6rem * var(--scale-factor)); position: relative; z-index: 200;" />
+                       <!-- Invisible clickable area for apostrophe -->
+                       <div id="apostropheClickArea" style="position: absolute; width: 80px; height: 200px; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 250; cursor: default;"></div>
                        <img class="a-letter" id="aLetter" src="LOGO/A.png" alt="A" style="height: calc(26rem * var(--scale-factor)); vertical-align: baseline; margin-left: calc(0.05rem * var(--scale-factor));" />
                        <img class="other-letters" src="LOGO/NTA.png" alt="NTA" style="height: calc(26rem * var(--scale-factor)); vertical-align: baseline;" />
                     </h1>
@@ -10145,19 +10147,22 @@
         }
       });
 
-      // Infinite Q Rotation + 4th Click A-Letter System
+      // Passcode System: 4 Q clicks + 2 A clicks + 1 apostrophe click
       let qClickCount = 0;
-      let aClicked = false;
+      let aClickCount = 0;
+      let apostropheClicked = false;
       let isActivated = false;
       const qElement = document.getElementById("qLetter");
       const aElement = document.getElementById("aLetter");
+      const apostropheElement = document.getElementById("apostropheLetter");
+      const apostropheClickArea = document.getElementById("apostropheClickArea");
       const titleElement = document.querySelector(".intro-title");
       const allOtherLetters = document.querySelectorAll(".other-letters");
       
-      // Q Click Handler - infinite rotation and scaling, activates A after 4 clicks
+      // Q Click Handler - infinite rotation and scaling
       const qClickHandler = function() {
-        // Stop Q from turning more if A has been clicked
-        if (aClicked) {
+        // Stop Q from turning more if 4 clicks reached or passcode is complete
+        if (qClickCount >= 4 || isActivated) {
           return;
         }
         
@@ -10215,14 +10220,10 @@
           addPaintSpillEffect(qClickCount);
         }
         
-        // Only activate A after exactly 4 clicks and not already clicked
-        if (qClickCount === 4 && !aClicked) {
+        // Activate A after 4 Q clicks
+        if (qClickCount === 4) {
           aElement.classList.add("clickable");
-        }
-        
-        // Deactivate A if more than 4 clicks
-        if (qClickCount > 4 && aElement.classList.contains("clickable")) {
-          aElement.classList.remove("clickable");
+          aElement.style.cursor = "pointer";
         }
       };
       
@@ -10294,28 +10295,56 @@
         }
       }
       
-      // A Click Handler - only works after exactly 4 Q clicks
+      // A Click Handler - needs 2 clicks after Q is done
       const aClickHandler = function() {
-        if (qClickCount === 4 && !aClicked && !isActivated) {
-          aClicked = true;
+        if (qClickCount === 4 && aClickCount < 2 && !isActivated) {
+          aClickCount++;
+          
+          // No visual changes to A - it stays normal
+          
+          // After 2 A clicks, activate apostrophe
+          if (aClickCount === 2) {
+            aElement.classList.remove("clickable");
+            aElement.style.cursor = "default";
+            apostropheElement.classList.add("clickable");
+            apostropheClickArea.style.cursor = "pointer";
+            // No visual cue - apostrophe stays normal
+          }
+        }
+      };
+      
+      // Apostrophe Click Handler - final unlock step
+      const apostropheClickHandler = function(e) {
+        console.log('Apostrophe clicked!', {qClickCount, aClickCount, apostropheClicked, isActivated});
+        
+        if (qClickCount === 4 && aClickCount === 2 && !apostropheClicked && !isActivated) {
+          console.log('Unlocking button!');
+          apostropheClicked = true;
           isActivated = true;
           
-          // Change A appearance (but A stays looking normal)
-          aElement.classList.remove("clickable");
-          aElement.classList.add("clicked");
+          // Remove clickable state
+          apostropheElement.classList.remove("clickable");
+          apostropheClickArea.style.cursor = "default";
           
           // Activate the enter button with purple color
-          setTimeout(() => {
-            enterButton.classList.remove("disabled");
-            enterButton.classList.add("unlocked");
-            enterButton.textContent = "Enter Your World";
-          }, 300);
+          const button = document.getElementById("enterPresentation");
+          console.log('Button found:', button);
+          if (button) {
+            button.classList.remove("disabled");
+            button.classList.add("unlocked");
+            button.textContent = "Enter Your World";
+            button.style.pointerEvents = "auto";
+            button.style.cursor = "pointer";
+            console.log('Button unlocked, classes:', button.className);
+          }
         }
       };
       
       // Add click events
       qElement.addEventListener("click", qClickHandler);
       aElement.addEventListener("click", aClickHandler);
+      apostropheElement.addEventListener("click", apostropheClickHandler);
+      apostropheClickArea.addEventListener("click", apostropheClickHandler);
 
       // Event Listeners for Intro
       enterButton.addEventListener("click", function() {
